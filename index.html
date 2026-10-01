@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>IKA.X</title>
+    
+    <!-- アイコン設定をシンプルかつ確実に修正 -->
+    <link rel="apple-touch-icon" href="https://api.iconify.design/fluent-emoji-flat:squid.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="IKA.X">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #121215; --card-bg: #1f2026; --neon-yellow: #eaff00;
+            --neon-pink: #ff2a7a; --neon-cyan: #0fa4b5; --text-main: #ffffff;
+            --black: #080808; --thick-border: 4px solid var(--black);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: repeating-linear-gradient( -45deg, #121215, #121215 15px, #1a1b22 15px, #1a1b22 30px ); color: var(--text-main); font-family: 'M PLUS Rounded 1c', sans-serif; margin: 0; padding: 0 16px 100px 16px; }
+        .app-header { padding: 20px 0 10px 0; text-align: center; transform: skewX(-5deg); }
+        .header-text { font-size: 32px; font-weight: 900; color: var(--neon-yellow); -webkit-text-stroke: 1.5px var(--black); text-shadow: 4px 4px 0px var(--black); letter-spacing: 2px; font-style: italic; }
+        .card { background: var(--card-bg); border: var(--thick-border); border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 6px 6px 0px var(--black); transform: rotate(-0.5deg); }
+        .card:nth-child(even) { transform: rotate(0.5deg); }
+        .page { display: none; } .page.active { display: block; animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .spla-title { font-size: 18px; font-weight: 900; color: var(--neon-cyan); -webkit-text-stroke: 1px var(--black); text-shadow: 2px 2px 0px var(--black); margin: 0 0 12px 0; display: inline-block; transform: skewX(-5deg); }
+        button.action-btn { background: var(--neon-yellow); color: var(--black); font-family: inherit; font-size: 18px; font-weight: 900; padding: 14px 20px; border: var(--thick-border); border-radius: 12px; cursor: pointer; width: 100%; margin-top: 15px; box-shadow: 4px 4px 0px var(--black); transform: skewX(-3deg); transition: all 0.1s; }
+        button.action-btn:active { transform: skewX(-3deg) translate(4px, 4px); box-shadow: 0px 0px 0px var(--black); }
+        input[type="file"], input[type="password"], select { width: 100%; padding: 12px; background: #2a2c36; border: 3px solid var(--black); border-radius: 8px; color: #fff; font-family: inherit; font-size: 14px; font-weight: bold; outline: none; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5); }
+        
+        .match-card { border: 3px solid var(--black); border-radius: 10px; margin-bottom: 12px; overflow: hidden; box-shadow: 3px 3px 0px var(--black); transform: skewX(-2deg); }
+        .match-card-win { background: var(--neon-yellow); color: var(--black); } .match-card-lose { background: #333; color: #ccc; }
+        .match-header { padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--black); font-weight: 900; }
+        .match-card-win .match-header { background: #fff; } .match-card-lose .match-header { background: #111; color: #777;}
+        .match-body { padding: 10px 12px; font-weight: 700; line-height: 1.4; } .match-stats { font-size: 13px; margin-top: 4px; font-family: monospace; font-weight: bold; }
+        .badge-win { background: var(--neon-pink); color: #fff; padding: 2px 8px; border-radius: 10px; border: 2px solid var(--black); font-size: 12px; transform: skewX(-10deg); display: inline-block; }
+        .badge-lose { background: #555; color: #aaa; padding: 2px 8px; border-radius: 10px; border: 2px solid var(--black); font-size: 12px; transform: skewX(-10deg); display: inline-block; }
+        
+        .edit-weapon-btn { background: #2a2c36; color: var(--neon-yellow); border: 2px solid var(--black); padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-left: 6px; }
+        
+        .rule-max-box { display: flex; justify-content: space-between; align-items: center; background: #111; border: 3px solid var(--black); padding: 8px 16px; border-radius: 8px; margin-bottom: 8px; transform: skewX(-3deg); box-shadow: 2px 2px 0px var(--black); }
+        .rule-max-name { font-size: 15px; font-weight: 900; color: #fff; }
+        .rule-max-val { font-size: 26px; font-weight: 900; color: var(--neon-pink); -webkit-text-stroke: 1px var(--black); text-shadow: 2px 2px 0px var(--black); }
+        .status-big { font-size: 36px; font-weight: 900; color: #555; text-align: center; margin: 10px 0; transform: skewX(-5deg); }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: #111; border-top: 4px solid var(--black); display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); z-index: 100; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #666; font-size: 11px; font-weight: 900; transition: all 0.2s; }
+        .nav-item svg { width: 26px; height: 26px; fill: currentColor; } .nav-item.active { color: var(--neon-yellow); transform: translateY(-3px) scale(1.1); filter: drop-shadow(0px 2px 5px rgba(234,255,0,0.5)); }
+    </style>
+</head>
+<body>
+    <div class="app-header"><div class="header-text">IKA.X</div></div>
+
+    <!-- きろくタブ -->
+    <div id="page-input" class="page active">
+        <div class="card">
+            <h3 class="spla-title">Xマッチをキロク</h3>
+            <p style="font-size:12px; font-weight:bold; margin-bottom:15px;">カメラロールからリザルト画面のスクショを複数選択してブチ込め！</p>
+            <input type="file" id="imageInput" accept="image/*" multiple>
+            <button class="action-btn" onclick="analyzeImage()">一気に解析する</button>
+            <div id="resultText" style="margin-top:15px; font-size:13px; font-weight:bold; border-left:4px solid var(--neon-cyan); padding-left:10px;">待機中...</div>
+        </div>
+    </div>
+
+    <!-- りれきタブ -->
+    <div id="page-history" class="page">
+        <div class="card">
+            <h3 class="spla-title">サイキンノタタカイ</h3>
+            <p style="font-size:12px; font-weight:bold; color:#aaa; margin-bottom:15px;">※カードの武器名をタップして自由に変更できるぞ！</p>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <!-- ぶんせきタブ -->
+    <div id="page-data" class="page">
+        <div class="card">
+            <h3 class="spla-title" style="color: var(--neon-yellow); display: block; text-align: center;">👑 ルール別 さいこうXP</h3>
+            <div id="ruleMaxXpList" style="margin-top: 15px;">
+                <div class="status-big">---.-</div>
+            </div>
+            <div id="kdDisplay" style="text-align:center; font-weight:900; font-size:14px; margin-top:15px; color:#aaa;">平均 --キル / KD --</div>
+        </div>
+        
+        <div class="card">
+            <h3 class="spla-title">📈 XPチャート</h3>
+            <select id="ruleFilter" onchange="updateDashboard()"><option value="all">全ルール混合</option></select>
+            <div style="margin-top: 15px; background: #111; border: 3px solid #000; border-radius: 8px; padding: 5px;">
+                <canvas id="xpChart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h3 class="spla-title">🏆 ルール別 勝率</h3>
+            <div id="ruleStats" style="font-size:14px; font-weight:bold; line-height:2.2;">データなし</div>
+        </div>
+        <div class="card">
+            <h3 class="spla-title" style="color: var(--neon-cyan);">🔫 ブキ別 勝率</h3>
+            <div id="weaponStats" style="font-size:14px; font-weight:bold; line-height:2.2;">データなし</div>
+        </div>
+        <button onclick="clearData()" style="background:#ff2a7a; color:#000; border:4px solid #000; font-size:14px; font-weight:900; padding:15px; border-radius:12px; width:100%; box-shadow:4px 4px 0 #000; margin-bottom:20px;">全データをリセット (消去)</button>
+    </div>
+
+    <!-- せっていタブ -->
+    <div id="page-settings" class="page">
+        <div class="card">
+            <h3 class="spla-title">⚙ APIキー</h3>
+            <p style="font-size:12px; font-weight:bold; color:#aaa; margin-bottom:10px;">Google AI StudioのAPIキーを入力しろ！</p>
+            <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
+            <button class="action-btn" style="background:var(--neon-cyan); color:#fff;" onclick="saveApiKey()">保存する</button>
+            <div id="settingsMessage" style="font-size:13px; font-weight:bold; margin-top:10px; text-align:center;"></div>
+        </div>
+    </div>
+
+    <!-- ボトムナビ -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchPage('input')"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><span>きろく</span></div>
+        <div class="nav-item" onclick="switchPage('history')"><svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg><span>りれき</span></div>
+        <div class="nav-item" onclick="switchPage('data')"><svg viewBox="0 0 24 24"><path d="M3.5 18.5l6-6 4 4L22 6.92 20.59 5.5l-7.09 8-4-4L2 17l1.5 1.5z"/></svg><span>ぶんせき</span></div>
+        <div class="nav-item" onclick="switchPage('settings')"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span>せってい</span></div>
+    </div>
+
+    <script>
+        window.onload = () => {
+            const savedKey = localStorage.getItem('ikax_api_key');
+            if(savedKey) document.getElementById('apiKeyInput').value = savedKey;
+        };
+
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            const navIndex = pageId === 'input' ? 0 : pageId === 'history' ? 1 : pageId === 'data' ? 2 : 3;
+            document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
+            if(pageId === 'data') updateDashboard();
+            if(pageId === 'history') updateHistoryList();
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if(key) { localStorage.setItem('ikax_api_key', key); document.getElementById('settingsMessage').innerHTML = '<span style="color:var(--neon-yellow);">保存完了！</span>'; } 
+            else { localStorage.removeItem('ikax_api_key'); document.getElementById('settingsMessage').innerText = 'キーを削除した。'; }
+        }
+
+        async function analyzeImage() {
+            const fileInput = document.getElementById('imageInput');
+            const resultDiv = document.getElementById('resultText');
+            const apiKey = localStorage.getItem('ikax_api_key');
+            if (!apiKey) { alert('「せってい」からAPIキーを登録してくれ！'); return; }
+            if (!fileInput.files.length) { alert('画像を選んでくれ！'); return; }
+            
+            const files = fileInput.files;
+            let successCount = 0; let skipCount = 0; let errorCount = 0;
+            let history = JSON.parse(localStorage.getItem('ikax_history')) || [];
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                let fileTimestamp = file.lastModified;
+
+                const matchName = file.name.match(/^20\d{12}/);
+                if (matchName) {
+                    const s = matchName[0];
+                    fileTimestamp = new Date(s.substring(0,4), s.substring(4,6)-1, s.substring(6,8), s.substring(8,10), s.substring(10,12), s.substring(12,14)).getTime();
+                }
+
+                resultDiv.innerHTML = `<span style="color:var(--neon-yellow);">${files.length}枚中 ${i + 1}枚目をインクで解析中...</span>`;
+
+                try {
+                    const base64Image = await toBase64(file);
+                    
+                    const prompt = `このスプラトゥーン3のリザルト画面（プレイヤー自身の行＝一番上またはハイライトされている行）を分析し、以下のJSON形式で出力してください。
+                    1. Xマッチ対象なら is_x_match: true。ただし、試合結果が「無効（DRAW または 無効）」の場合は is_valid: false にしてください。
+                    2. weapon: プレイヤーが使っているブキのアイコンから推測される名称。
+                    3. rule: ルール名（ガチエリア、ガチヤグラ、ガチホコバトル、ガチアサリ のいずれか）
+                    4. stage: ステージ名
+                    5. result: 勝敗（WIN または LOSE）
+                    6. kill, assist, death: 数値
+                    7. xp: Xパワーの数値（表示がなければ0.0）
+                    8. played_at: 画面内に試合日時の文字があれば抽出。なければ空文字。
+                    { "is_x_match": true, "is_valid": true, "weapon": "", "rule": "", "stage": "", "result": "WIN", "kill": 0, "assist": 0, "death": 0, "xp": 0.0, "played_at": "" }`;
+
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: file.type, data: base64Image.split(',')[1] } }] }] })
+                    });
+
+                    if (!response.ok) throw new Error(`通信エラー (${response.status})`);
+                    const data = await response.json();
+                    
+                    if(data.candidates && data.candidates.length > 0) {
+                        let text = data.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const resultObj = JSON.parse(text);
+
+                        if (!resultObj.is_x_match || resultObj.is_valid === false) { skipCount++; continue; }
+
+                        let finalTimestamp = fileTimestamp;
+                        if (resultObj.played_at && resultObj.played_at.trim() !== "") {
+                            const parsed = Date.parse(resultObj.played_at.replace(/\./g, '/').replace(/-/g, '/')); 
+                            if (!isNaN(parsed)) finalTimestamp = parsed;
+                        }
+                        resultObj.timestamp = finalTimestamp;
+
+                        const isDuplicate = history.some(h => h.rule === resultObj.rule && h.kill === resultObj.kill && h.death === resultObj.death && h.xp === resultObj.xp);
+                        if (isDuplicate) { skipCount++; continue; }
+
+                        history.push(resultObj);
+                        successCount++;
+                    } else { errorCount++; }
+                    
+                    await new Promise(r => setTimeout(r, 1000));
+                } catch (error) { errorCount++; console.error("エラー:", error); }
+            }
+
+            localStorage.setItem('ikax_history', JSON.stringify(history));
+            resultDiv.innerHTML = `<strong>【解析カンリョウ！】</strong><br>
+                ・成功: <span style="color:var(--neon-yellow); font-weight:900;">${successCount}</span> 件<br>
+                ・スキップ(無効試合・重複等): ${skipCount} 件<br>
+                ・エラー: ${errorCount} 件`;
+        }
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader(); reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error);
+        });
+
+        function editWeaponName(index) {
+            let history = JSON.parse(localStorage.getItem('ikax_history')) || [];
+            const sorted = [...history].sort((a, b) => b.timestamp - a.timestamp);
+            const target = sorted[index];
+            
+            const newWeapon = prompt("正しいブキ名を入力してくれ！", target.weapon);
+            if (newWeapon !== null && newWeapon.trim() !== "") {
+                const realIndex = history.findIndex(h => h.timestamp === target.timestamp);
+                if (realIndex !== -1) {
+                    history[realIndex].weapon = newWeapon.trim();
+                    localStorage.setItem('ikax_history', JSON.stringify(history));
+                    updateHistoryList();
+                }
+            }
+        }
+
+        function updateHistoryList() {
+            let history = JSON.parse(localStorage.getItem('ikax_history')) || [];
+            const listDiv = document.getElementById('historyList');
+            if(history.length === 0) { listDiv.innerHTML = "まだデータがないぞ！"; return; }
+
+            const sorted = [...history].sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
+            let html = "";
+            sorted.forEach((d, i) => {
+                const isWin = d.result.toUpperCase().includes('WIN') || d.result.includes('勝');
+                const cardClass = isWin ? 'match-card-win' : 'match-card-lose';
+                const badgeClass = isWin ? 'badge-win' : 'badge-lose';
+                
+                html += `
+                <div class="match-card ${cardClass}">
+                    <div class="match-header"><span class="${badgeClass}">${isWin ? 'WIN!' : 'LOSE...'}</span><span style="font-size:16px;">${d.xp > 0 ? 'XP ' + d.xp : '計測中'}</span></div>
+                    <div class="match-body">
+                        <div style="font-size: 14px;">🗺 ${d.rule} / ${d.stage}</div>
+                        <div class="match-stats">
+                            🔫 ${d.weapon} <button class="edit-weapon-btn" onclick="editWeaponName(${i})">変更</button> ｜ 💥 ${d.kill}k ${d.assist}a ${d.death}d
+                        </div>
+                    </div>
+                </div>`;
+            });
+            listDiv.innerHTML = html;
+        }
+
+        let chartInstance = null;
+        function updateDashboard() {
+            let history = JSON.parse(localStorage.getItem('ikax_history')) || [];
+            
+            if(history.length === 0) {
+                if(chartInstance) {
+                    chartInstance.destroy();
+                    chartInstance = null;
+                    const canvas = document.getElementById('xpChart');
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+                document.getElementById('ruleMaxXpList').innerHTML = '<div class="status-big">---.-</div>';
+                document.getElementById('kdDisplay').innerText = "平均 --キル / トータルKD --";
+                document.getElementById('ruleStats').innerHTML = "データなし";
+                document.getElementById('weaponStats').innerHTML = "データなし";
+                return;
+            }
+
+            history.sort((a, b) => a.timestamp - b.timestamp); 
+
+            const xpHistory = history.filter(d => d.xp > 0);
+            const xpRules = [...new Set(xpHistory.map(d => d.rule))];
+            const ruleMaxContainer = document.getElementById('ruleMaxXpList');
+            
+            if (xpRules.length === 0) {
+                ruleMaxContainer.innerHTML = '<div class="status-big">---.-</div>';
+            } else {
+                let maxHtml = "";
+                xpRules.forEach(r => {
+                    const ruleXpList = xpHistory.filter(d => d.rule === r).map(d => d.xp);
+                    const ruleMax = Math.max(...ruleXpList).toFixed(1);
+                    maxHtml += `
+                    <div class="rule-max-box">
+                        <span class="rule-max-name">${r}</span>
+                        <span class="rule-max-val">${ruleMax}</span>
+                    </div>`;
+                });
+                ruleMaxContainer.innerHTML = maxHtml;
+            }
+
+            let tKill = 0, tDeath = 0;
+            history.forEach(d => { tKill += (Number(d.kill) || 0); tDeath += (Number(d.death) || 0); });
+            document.getElementById('kdDisplay').innerText = `平均 ${(tKill / history.length).toFixed(1)}キル / トータルKD ${tDeath === 0 ? tKill.toFixed(2) : (tKill / tDeath).toFixed(2)}`;
+
+            const ruleFilter = document.getElementById('ruleFilter');
+            const currentSelection = ruleFilter.value;
+            let optionsHtml = '<option value="all">全ルール混合</option>';
+            xpRules.forEach(r => { optionsHtml += `<option value="${r}">${r} のみ</option>`; });
+            ruleFilter.innerHTML = optionsHtml;
+            if(xpRules.includes(currentSelection.replace(" のみ", "")) || currentSelection === 'all') ruleFilter.value = currentSelection;
+
+            let chartHistory = xpHistory;
+            if (ruleFilter.value !== 'all') chartHistory = chartHistory.filter(d => d.rule === ruleFilter.value);
+
+            const xpData = chartHistory.map(d => d.xp);
+            const ctx = document.getElementById('xpChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            
+            if(xpData.length > 0) {
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartHistory.map((_, i) => `${i + 1}戦`),
+                        datasets: [{ label: ruleFilter.value === 'all' ? 'Xパワー' : `${ruleFilter.value}`, data: xpData, borderColor: '#0fa4b5', backgroundColor: 'rgba(15, 164, 181, 0.2)', borderWidth: 4, pointBackgroundColor: '#eaff00', pointBorderColor: '#000', pointRadius: 5, pointBorderWidth: 2, tension: 0.1, fill: true }]
+                    },
+                    options: { scales: { y: { min: Math.min(...xpData) - 30, max: Math.max(...xpData) + 30, ticks: { color: '#ccc', font: {weight:'bold'} }, grid: { color: '#333' } }, x: { ticks: { color: '#ccc', font: {weight:'bold'} }, grid: { color: '#333' } } }, plugins: { legend: { labels: { color: '#fff', font: { family: "'M PLUS Rounded 1c'", weight:'bold' } } } } }
+                });
+            }
+
+            const calcWinRate = (dataList) => {
+                if(dataList.length === 0) return "0% (0勝0敗)";
+                const wins = dataList.filter(d => d.result.toUpperCase().includes('WIN') || d.result.includes('勝')).length;
+                return `<span style="color:var(--neon-yellow); font-size:18px;">${Math.round((wins / dataList.length) * 100)}%</span> <span style="color:#aaa; font-size:12px;">(${wins}勝 ${dataList.length - wins}敗)</span>`;
+            };
+
+            let ruleHtml = "";
+            [...new Set(history.map(d => d.rule))].forEach(r => {
+                ruleHtml += `<div style="border-bottom:2px dashed #333; padding:4px 0; display:flex; justify-content:space-between;"><span>${r}</span> <span>${calcWinRate(history.filter(d => d.rule === r))}</span></div>`;
+            });
+            document.getElementById('ruleStats').innerHTML = ruleHtml;
+
+            let weaponHtml = "";
+            [...new Set(history.map(d => d.weapon))].forEach(w => {
+                weaponHtml += `<div style="border-bottom:2px dashed #333; padding:4px 0; display:flex; justify-content:space-between;"><span>🔫 ${w}</span> <span>${calcWinRate(history.filter(d => d.weapon === w))}</span></div>`;
+            });
+            document.getElementById('weaponStats').innerHTML = weaponHtml;
+        }
+
+        function clearData() {
+            if(confirm("全ての戦績データを消去するぞ！本当にいいか？")) {
+                localStorage.removeItem('ikax_history');
+                document.getElementById('ruleStats').innerHTML = "データなし";
+                document.getElementById('weaponStats').innerHTML = "データなし";
+                document.getElementById('ruleMaxXpList').innerHTML = '<div class="status-big">---.-</div>'; 
+                document.getElementById('kdDisplay').innerText = "平均 --キル / トータルKD --";
+                
+                if(chartInstance) {
+                    chartInstance.destroy();
+                    chartInstance = null;
+                }
+                const canvas = document.getElementById('xpChart');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+                document.getElementById('resultText').innerText = "データをリセットした！";
+                document.getElementById('ruleFilter').innerHTML = '<option value="all">全ルール混合</option>';
+            }
+        }
+    </script>
+</body>
+</html>
