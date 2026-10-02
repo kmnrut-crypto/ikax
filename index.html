@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>IKA.X</title>
     
-    <!-- アイコン設定をシンプルかつ確実に修正 -->
     <link rel="apple-touch-icon" href="https://api.iconify.design/fluent-emoji-flat:squid.svg">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -50,6 +49,10 @@
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: #111; border-top: 4px solid var(--black); display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #666; font-size: 11px; font-weight: 900; transition: all 0.2s; }
         .nav-item svg { width: 26px; height: 26px; fill: currentColor; } .nav-item.active { color: var(--neon-yellow); transform: translateY(-3px) scale(1.1); filter: drop-shadow(0px 2px 5px rgba(234,255,0,0.5)); }
+
+        /* モーダル用CSS追加 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 12px; border: var(--thick-border); width: 100%; max-width: 400px; transform: skewX(-1deg); box-shadow: 6px 6px 0px var(--black); }
     </style>
 </head>
 <body>
@@ -114,6 +117,18 @@
         </div>
     </div>
 
+    <!-- ブキ変更モーダル（追加） -->
+    <div id="weaponModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="spla-title" style="margin-top:0;">🔫 ブキを変更する</h3>
+            <select id="weaponSelect" style="margin-bottom:15px; font-size:16px; padding:15px;"></select>
+            <div style="display:flex; gap:10px;">
+                <button class="action-btn" style="background:#555; color:#fff;" onclick="closeModal()">キャンセル</button>
+                <button class="action-btn" onclick="saveWeapon()">変更する</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ボトムナビ -->
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchPage('input')"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><span>きろく</span></div>
@@ -123,9 +138,32 @@
     </div>
 
     <script>
+        // AIプロンプトとプルダウンメニューの両方で使う「全ブキリスト」
+        const WEAPON_LIST = [
+            "ボールドマーカー", "ボールドマーカーネオ", "わかばシューター", "もみじシューター", "シャープマーカー", "シャープマーカーネオ", "スプラシューター", "スプラシューターコラボ", "オクタシューター レプリカ", "ヒーローシューター レプリカ", ".52ガロン", ".52ガロンデコ", "N-ZAP85", "N-ZAP89", "プライムシューター", "プライムシューターコラボ", ".96ガロン", ".96ガロンデコ", "ジェットスイーパー", "ジェットスイーパーカスタム", "スペースシューター", "スペースシューターコラボ", "L3リールガン", "L3リールガンD", "H3リールガン", "H3リールガンD", "ボトルガイザー", "ボトルガイザーフォイル",
+            "カーボンローラー", "カーボンローラーデコ", "スプラローラー", "スプラローラーコラボ", "ダイナモローラー", "ダイナモローラーテスラ", "ヴァリアブルローラー", "ヴァリアブルローラーフォイル", "ワイドローラー", "ワイドローラーコラボ",
+            "スクイックリンα", "スクイックリンβ", "スプラチャージャー", "スプラチャージャーコラボ", "スプラスコープ", "スプラスコープコラボ", "リッター4K", "リッター4Kカスタム", "4Kスコープ", "4Kスコープカスタム", "14式竹筒銃・甲", "14式竹筒銃・乙", "ソイチューバー", "ソイチューバーカスタム", "R-PEN/5H", "R-PEN/5B",
+            "バケットスロッシャー", "バケットスロッシャーデコ", "ヒッセン", "ヒッセン・ヒュー", "スクリュースロッシャー", "スクリュースロッシャーネオ", "オーバーフロッシャー", "オーバーフロッシャーデコ", "エクスプロッシャー", "エクスプロッシャーカスタム", "モップリン", "モップリンD",
+            "スプラスピナー", "スプラスピナーコラボ", "バレルスピナー", "バレルスピナーデコ", "ハイドラント", "ハイドラントカスタム", "クーゲルシュライバー", "クーゲルシュライバー・ヒュー", "ノーチラス47", "ノーチラス79", "イグザミナー", "イグザミナー・ヒュー",
+            "スパッタリー", "スパッタリー・ヒュー", "スプラマニューバー", "スプラマニューバーコラボ", "ケルビン525", "ケルビン525デコ", "デュアルスイーパー", "デュアルスイーパーカスタム", "クアッドホッパーブラック", "クアッドホッパーホワイト", "ガエンFF", "ガエンFFカスタム",
+            "パラシェルター", "パラシェルターソレラ", "キャンピングシェルター", "キャンピングシェルターソレラ", "スパイガジェット", "スパイガジェットソレラ", "24式張替傘・甲", "24式張替傘・乙",
+            "ノヴァブラスター", "ノヴァブラスターネオ", "ホットブラスター", "ホットブラスターカスタム", "ロングブラスター", "ロングブラスターカスタム", "クラッシュブラスター", "クラッシュブラスターネオ", "ラピッドブラスター", "ラピッドブラスターデコ", "Rブラスターエリート", "Rブラスターエリートデコ", "S-BLAST92", "S-BLAST91",
+            "パブロ", "パブロ・ヒュー", "ホクサイ", "ホクサイ・ヒュー", "フィンセント", "フィンセント・ヒュー",
+            "トライストリンガー", "トライストリンガーコラボ", "LACT-450", "LACT-450デコ", "フルイドV", "フルイドVカスタム",
+            "ジムワイパー", "ジムワイパー・ヒュー", "ドライブワイパー", "ドライブワイパーデコ", "デンタルワイパーミント", "デンタルワイパースミ"
+        ];
+
         window.onload = () => {
             const savedKey = localStorage.getItem('ikax_api_key');
             if(savedKey) document.getElementById('apiKeyInput').value = savedKey;
+            
+            // 初回ロード時にモーダルのプルダウンリストを生成
+            const select = document.getElementById('weaponSelect');
+            WEAPON_LIST.forEach(w => {
+                const opt = document.createElement('option');
+                opt.value = w; opt.textContent = w;
+                select.appendChild(opt);
+            });
         };
 
         function switchPage(pageId) {
@@ -154,6 +192,8 @@
             const files = fileInput.files;
             let successCount = 0; let skipCount = 0; let errorCount = 0;
             let history = JSON.parse(localStorage.getItem('ikax_history')) || [];
+            
+            const weaponListStr = WEAPON_LIST.join(", ");
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -171,8 +211,11 @@
                     const base64Image = await toBase64(file);
                     
                     const prompt = `このスプラトゥーン3のリザルト画面（プレイヤー自身の行＝一番上またはハイライトされている行）を分析し、以下のJSON形式で出力してください。
-                    1. Xマッチ対象なら is_x_match: true。ただし、試合結果が「無効（DRAW または 無効）」の場合は is_valid: false にしてください。
-                    2. weapon: プレイヤーが使っているブキのアイコンから推測される名称。
+                    1. is_x_match: Xマッチ対象なら true。ただし、試合結果が「無効（DRAW または 無効）」の場合は is_valid: false にしてください。
+                    2. weapon: プレイヤー自身が使っているブキの名称。
+                       ※超重要：必ず以下の「公式ブキ名リスト」の中から、最も形が近いものを1つだけ選び、一言一句違わず出力してください。リストにない名称や略称は絶対に不可です。
+                       ※ヒント：このプレイヤーは現在「ノーチラス47」と「ノーチラス79」をメインに使用しています。画像が不鮮明な場合はまずこの2種の可能性を高く見積もってください。
+                       【公式ブキ名リスト】 ${weaponListStr}
                     3. rule: ルール名（ガチエリア、ガチヤグラ、ガチホコバトル、ガチアサリ のいずれか）
                     4. stage: ステージ名
                     5. result: 勝敗（WIN または LOSE）
@@ -225,20 +268,42 @@
             reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error);
         });
 
-        function editWeaponName(index) {
-            let history = JSON.parse(localStorage.getItem('ikax_history')) || [];
-            const sorted = [...history].sort((a, b) => b.timestamp - a.timestamp);
-            const target = sorted[index];
+        // モーダル操作用の変数と関数（プルダウン式に変更）
+        let editingTimestamp = null;
+        
+        function editWeaponName(timestamp) {
+            editingTimestamp = timestamp;
+            const history = JSON.parse(localStorage.getItem('ikax_history')) || [];
+            const target = history.find(h => h.timestamp === timestamp);
+            if (!target) return;
             
-            const newWeapon = prompt("正しいブキ名を入力してくれ！", target.weapon);
-            if (newWeapon !== null && newWeapon.trim() !== "") {
-                const realIndex = history.findIndex(h => h.timestamp === target.timestamp);
-                if (realIndex !== -1) {
-                    history[realIndex].weapon = newWeapon.trim();
-                    localStorage.setItem('ikax_history', JSON.stringify(history));
-                    updateHistoryList();
-                }
+            const select = document.getElementById('weaponSelect');
+            if(WEAPON_LIST.includes(target.weapon)) {
+                select.value = target.weapon;
+            } else {
+                select.value = "ノーチラス47"; // 万が一リストにない変な名前だった時のデフォルト
             }
+            
+            document.getElementById('weaponModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('weaponModal').style.display = 'none';
+            editingTimestamp = null;
+        }
+
+        function saveWeapon() {
+            if (!editingTimestamp) return;
+            const newWeapon = document.getElementById('weaponSelect').value;
+            let history = JSON.parse(localStorage.getItem('ikax_history')) || [];
+            const index = history.findIndex(h => h.timestamp === editingTimestamp);
+            
+            if (index !== -1) {
+                history[index].weapon = newWeapon;
+                localStorage.setItem('ikax_history', JSON.stringify(history));
+                updateHistoryList();
+            }
+            closeModal();
         }
 
         function updateHistoryList() {
@@ -248,7 +313,7 @@
 
             const sorted = [...history].sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
             let html = "";
-            sorted.forEach((d, i) => {
+            sorted.forEach((d) => {
                 const isWin = d.result.toUpperCase().includes('WIN') || d.result.includes('勝');
                 const cardClass = isWin ? 'match-card-win' : 'match-card-lose';
                 const badgeClass = isWin ? 'badge-win' : 'badge-lose';
@@ -259,7 +324,7 @@
                     <div class="match-body">
                         <div style="font-size: 14px;">🗺 ${d.rule} / ${d.stage}</div>
                         <div class="match-stats">
-                            🔫 ${d.weapon} <button class="edit-weapon-btn" onclick="editWeaponName(${i})">変更</button> ｜ 💥 ${d.kill}k ${d.assist}a ${d.death}d
+                            🔫 ${d.weapon} <button class="edit-weapon-btn" onclick="editWeaponName(${d.timestamp})">変更</button> ｜ 💥 ${d.kill}k ${d.assist}a ${d.death}d
                         </div>
                     </div>
                 </div>`;
